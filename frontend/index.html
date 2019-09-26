@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Vue Test</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+
+    <!-- Icons -->
+    <link href="assets/vendor/nucleo/css/nucleo.css" rel="stylesheet">
+    <link href="assets/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+
+    <link type="text/css" href="assets/css/argon.min.css" rel="stylesheet">
+    <link type="text/css" href="assets/css/animate.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style type="text/css">
+        body, html {
+            height: 100%;
+        }
+
+        .todo-wrapper {
+
+        }
+
+        .todo-head {
+        }
+
+        .todo-body {
+            background-color: #172b4d;
+            color: white;
+        }
+
+        .todo-body ul {
+            list-style: none;
+            padding: 20px;
+            text-align: left;
+            color: white;
+        }
+
+        .todo-body ul li {
+            border-bottom: 1px dashed gray;
+            margin-bottom: 5px;
+        }
+
+        .todo-footer {
+            background: #182a50;
+            margin: 0px;
+            padding: 5px 0px 20px 0px;
+        }
+
+        .task-completed {
+            text-decoration: line-through;
+            color: #7080a2;
+        }
+
+        .no-tasks {
+            padding: 10px 0px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container h-100" id="app">
+    <div class="row justify-content-center align-items-center">
+        <div class="col-sm-12 col-md-6 mx-auto text-center todo-wrapper h-50">
+            <div class="todo-head">
+                <todo-head v-bind:tasks="todosList"></todo-head>
+            </div>
+            <div class="todo-body h-100">
+                <ul class="h-100" v-if="todosList.length>0">
+                    <todo-item
+                            v-for="todo in todosList"
+                            v-bind:todo="todo"
+                            v-bind:key="todo.id"
+                    >
+                    </todo-item>
+                </ul>
+                <div class="no-tasks animate tada" v-if="todosList.length==0">Add a Task Below.</div>
+            </div>
+            <div class="todo-footer row">
+                <div class="col-sm-12 col-md-12">
+                    <div class="form-group">
+                        <div class="input-group input-group-alternative mb-4">
+                            <input class="form-control" placeholder="Add New Task" type="text" v-model="newitem"
+                                   id="new-task" @keyup.enter="addNew">
+                            <div class="input-group-append">
+                                <span class="input-group-text"><i class="ni ni-bullet-list-67"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-12">
+                    <button type="button" v-on:click="addNew" class="btn btn-sm btn-primary">Add New</button>
+                    <button v-if="!user.isLoggedIn" type="button" v-on:click="signIn" class="btn btn-sm btn-primary">
+                        Login to Save Changes
+                    </button>
+                    <button v-if="user.isLoggedIn" type="button" v-on:click="signOut" class="btn btn-sm btn-primary">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Core -->
+<script src="assets/vendor/jquery/jquery.min.js"></script>
+<script src="assets/vendor/popper/popper.min.js"></script>
+<script src="assets/vendor/bootstrap/bootstrap.min.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@8"></script>
+
+<!-- Theme JS -->
+<script src="assets/js/argon.min.js"></script>
+<script type="text/javascript">
+
+    //const SERVER_URL = "http://localhost:3000";
+    const SERVER_URL = "https://svr-todolist.herokuapp.com";
+    Vue.component('todo-head', {
+        props: ['tasks'],
+        template: `<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+		<div class="container">
+		<a class="navbar-brand" href="#">TODO LIST</a>
+		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-default" aria-controls="navbar-default" aria-expanded="false" aria-label="Toggle navigation">
+		</button>
+		<span class="badge badge-secondary">{{ tasks.length }}</span>
+		</div>
+		</nav>`
+    })
+
+    Vue.component('todo-item', {
+        props: ['todo'],
+        template: `
+		<li class="h-40 row animated fadeInUp" v-bind:class="{ 'task-completed' : todo.isCompleted }">
+		<div class="col-1 col-sm-1 col-md-1">{{ todo.id }}</div>
+		<div class="col-8 col-sm-8 col-md-8"> {{ todo.task }} </div>
+		<div class="col-sm-3 col-md-3 container">
+		    <div class="row">
+		    <button v-on:click="onTaskDone(todo)" class="btn btn-primary btn-sm">
+                    <i v-bind:class="{'fa fa-undo': todo.isCompleted,'ni ni-check-bold': !todo.isCompleted}"></i>
+                </button>
+            <button v-on:click="onTaskDelete(todo)" class="btn btn-danger btn-sm">X</button>
+            <button v-on:click="onTaskShare(todo)" class="btn btn-secondary btn-sm">
+                    <i class="ni ni-send"></i>
+                </button>
+            </div>
+        </div>
+		</li>`,
+        methods: {
+            onTaskClick: function (todo) {
+                console.log(todo);
+            },
+            onTaskDone: function (todo) {
+                console.log(todo);
+                todo.isCompleted = !todo.isCompleted;
+                axios.post(SERVER_URL + '/todo/updateStatus', {
+                    todoID: todo._id,
+                    todoStatus: todo.isCompleted
+                }, {
+                    headers: {
+                        "Authorization": "Bearer " + localStorage.getItem('userToken')
+                    }
+                }).then((d) => {
+                    console.log(d);
+
+                });
+            },
+            onTaskDelete: function (todo) {
+                this.$parent.todosList.splice(this.$parent.todosList.findIndex(function (i) {
+                    return i.id === todo.id;
+                }), 1);
+                //this.renumberList(app.todosList);
+
+                axios.post(SERVER_URL + '/todo/delete', {
+                    todoID: todo._id
+                }, {
+                    headers: {
+                        "Authorization": "Bearer " + localStorage.getItem('userToken')
+                    }
+                }).then((d) => {
+                    console.log(d);
+
+                });
+            },
+            onTaskShare: function (todo) {
+                shareTodo(todo);
+            }
+        }
+    });
+
+    const signIn = (vm, userLoginData) => {
+        const {email, password} = userLoginData;
+
+        return new Promise((resolve, reject) => {
+            axios.post(SERVER_URL + '/auth', {
+                email,
+                password
+            }).then((d) => {
+                if (d.data.token === "") return;
+                localStorage.setItem('userToken', d.data.token);
+
+                vm.user.userToken = d.data.token;
+                vm.user.isLoggedIn = true;
+
+                axios.get(SERVER_URL + '/user', {
+                    headers: {
+                        "Authorization": "Bearer " + localStorage.getItem('userToken')
+                    }
+                }).then((d) => {
+                    console.log(d);
+
+                    axios.post(SERVER_URL + '/todo/list', {}, {
+                        headers: {
+                            "Authorization": "Bearer " + localStorage.getItem('userToken')
+                        }
+                    }).then((d) => {
+                        if (d.data.length > 0) {
+                            todoItems = d.data[0].todo;
+                            vm.todosList = [];
+                            todoItems.map((item) => {
+                                vm.todosList.push({
+                                    _id: item.id,
+                                    task: item.content,
+                                    isCompleted: false
+                                })
+                            });
+                            resolve({'statusCode': 200});
+                        } else {
+                            resolve({'statusCode': 500, 'status': 'No Items Found'});
+                        }
+
+                    }).catch((err) => {
+                        vm.user.isLoggedIn = false;
+                        reject({'statusCode': 201});
+                    });
+
+                }).catch((err) => {
+                    console.log(err)
+                });
+
+
+            })
+        });
+    };
+    const signUp = () => {
+        let signUpData = {
+            email: '',
+            password: '',
+            firstName: '',
+            lastName: ''
+        };
+
+        Swal.mixin({
+            input: 'text',
+            confirmButtonText: 'Next &rarr;',
+            showCancelButton: true,
+            progressSteps: ['1', '2', '3', '4'],
+        }).queue([
+            {
+                title: 'Email',
+                text: 'I am sure you remember it',
+                input: 'email',
+                preConfirm: (email) => {
+                    signUpData.email = email
+                }
+            },
+            {
+                title: 'Password',
+                text: 'Shhh.. make sure you look around',
+                input: 'password',
+                preConfirm: (password) => {
+                    signUpData.password = password
+                }
+            },
+            {
+                title: 'First Name',
+                preConfirm: (fname) => {
+                    signUpData.firstName = fname
+                }
+            },
+            {
+                title: 'Last Name',
+                showLoaderOnConfirm: true,
+                preConfirm: async (lname) => {
+                    signUpData.lastName = lname;
+
+                    await axios.post(SERVER_URL + '/user/insert', signUpData).then((d) => {
+                        if (d.data.statusCode == "200") {
+                            /*Swal.fire({
+                                type: 'success',
+                                title: 'You can login now',
+                                showConfirmButton: false,
+                                timer: 1500
+                            })*/
+                            return d.data;
+                        }
+                    })
+                }
+            }
+        ]).then((d) => {
+            console.log(d);
+            Swal.fire({
+                type: 'success',
+                title: 'You can login now',
+                showConfirmButton: false,
+                timer: 1500
+            })
+        })
+    };
+    const shareTodo = (todo) => {
+        Swal.fire({
+            title: 'Enter Email',
+            input: 'email',
+            inputAttributes: {
+                autocapitalize: 'off'
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Share',
+            showLoaderOnConfirm: true,
+            preConfirm: (email) => {
+                return axios.post(SERVER_URL + '/todo/share', {
+                        todoID: todo._id,
+                        toUserEmail: email
+                    },
+                    {
+                        headers: {
+                            "Authorization": "Bearer " + localStorage.getItem('userToken')
+                        }
+                    })
+                    .then((response) => {
+                        return response
+                    })
+                    .catch((error) => {
+                        console.error(error);
+                    })
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.value.data.statusCode == "404") {
+                Swal.fire({
+                    type: 'error',
+                    title: 'User Not Found',
+                    text: 'The person is not landed here yet.',
+                    showConfirmButton: false,
+                    timer: 1500
+                })
+            }
+
+            if (result.value.data.statusCode == "200") {
+                Swal.fire({
+                    type: 'success',
+                    title: 'Shared',
+                    showConfirmButton: false,
+                    timer: 1500
+                })
+            }
+        })
+    };
+    var app = new Vue({
+        el: '#app',
+        data: {
+            newitem: '',
+            todosList: [],
+            user: {
+                isLoggedIn: false,
+                userToken: '',
+                userProfile: {}
+            }
+        },
+        mounted() {
+            if (localStorage.getItem('userToken') && localStorage.getItem('userToken') !== "undefined") {
+                this.user.isLoggedIn = true;
+                vm = this;
+                axios.post(SERVER_URL + '/todo/list', {}, {
+                    headers: {
+                        "Authorization": "Bearer " + localStorage.getItem('userToken')
+                    }
+                }).then((d) => {
+                    if (d.data.length > 0) {
+                        todoItems = d.data[0].todo;
+
+                        todoItems.map((item) => {
+                            vm.todosList.push({
+                                _id: item.id,
+                                task: item.content,
+                                isCompleted: item.isCompleted
+                            })
+                        });
+                    }
+
+                })
+            }
+        },
+        methods: {
+            addNew: function () {
+                if (!this.valueExists(this.newitem) && this.newitem !== "") {
+                    //this.todosList.push({id: this.todosList.length + 1, task: this.newitem, isCompleted: false});
+
+                    if (this.user.isLoggedIn) {
+                        axios.post(SERVER_URL + '/todo/add', {
+                            todo: this.newitem
+                        }, {
+                            headers: {
+                                "Authorization": "Bearer " + localStorage.getItem('userToken')
+                            }
+                        }).then((d) => {
+                            //console.log(d);
+                            this.todosList.push({
+                                id: this.todosList.length + 1,
+                                task: this.newitem,
+                                isCompleted: false,
+                                _id: d.data.id
+                            });
+                            this.newitem = '';
+                        });
+                    } else {
+                        this.todosList.push({id: this.todosList.length + 1, task: this.newitem, isCompleted: false});
+                        this.newitem = '';
+                    }
+
+                } else {
+                    if (this.newitem === "") {
+                        Swal.fire({
+                            title: "Brrrrr!",
+                            text: "I can't process that fast",
+                            type: "warning",
+                            confirmButtonText: "I Understand!",
+                        });
+                    } else {
+                        Swal.fire({
+                            title: "Brrrrr!",
+                            text: "Its already in the list",
+                            type: "warning",
+                            confirmButtonText: "Oh Okay!",
+                        });
+                    }
+
+                }
+            },
+            signIn: function () {
+                let vm = this;
+                let userLoginData = {
+                    email: '',
+                    password: '',
+                };
+
+                Swal.mixin({
+                    input: 'text',
+                    confirmButtonText: 'Next &rarr;',
+                    showCancelButton: true,
+                    progressSteps: ['1', '2'],
+                    footer: '<a href="#" onclick="signUp()">SignUp?</a>'
+                }).queue([
+                    {
+                        title: 'Email',
+                        text: 'I am sure you remember it',
+                        preConfirm: (email) => {
+                            userLoginData.email = email;
+                        }
+                    },
+                    {
+                        title: 'Password',
+                        text: 'Shhh.. make sure you look around',
+                        input: 'password',
+                        showLoaderOnConfirm: true,
+                        preConfirm: (password) => {
+                            userLoginData.password = password;
+                            signIn(vm, userLoginData).then((data) => {
+                                //console.log(data);
+                            }).catch((err) => {
+                                console.log(err);
+                                Swal.fire({
+                                    type: 'error',
+                                    title: 'Oops...',
+                                    text: 'Something went wrong!',
+                                    footer: '<a href>Why do I have this issue?</a>'
+                                })
+                            });
+                        }
+                    }
+                ])/*.then((result) => {
+                    if (result.value) {
+                        Swal.fire({
+                            title: 'All done!',
+                            html:
+                                'Your answers: <pre><code>' +
+                                JSON.stringify(result.value) +
+                                '</code></pre>',
+                            confirmButtonText: 'Lovely!'
+                        })
+                    }
+                })*/
+            },
+            signOut: function () {
+                localStorage.removeItem('userToken');
+                this.user.isLoggedIn = false;
+                this.user.userToken = '';
+                this.todosList = [];
+            },
+            valueExists: function (value) {
+                return this.todosList.some(function (el) {
+                    return el.task === value;
+                });
+            }
+        },
+        watch: {
+            todosList: {
+                handler: function (val, oldval) {
+                    var count = 1;
+                    val.forEach(function (x) {
+                        x.id = count++;
+                    });
+                },
+                deep: true
+            }
+        }
+    });
+
+</script>
+</body>
+</html>
