@@ -159,3 +159,26 @@ exports.updateStatus = (userID,todoID,status) => {
         })
     })
 };
+
+exports.updateTodo = (userID,todoID,content) => {
+    let db = dbUtils.get();
+    let todos = db.collection('Todos');
+
+    return new Promise((resolve, reject)=>{
+        todos.updateOne({
+            _id: userID,
+            "todo.id": ObjectId(todoID)
+        },{
+            $set:{
+                "todo.$.content":content
+            }
+        },(err,res)=>{
+            if(err){
+                throw err;
+                reject(err);
+            }else{
+                resolve(res)
+            }
+        })
+    })
+};

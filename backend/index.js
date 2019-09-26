@@ -150,6 +150,20 @@ server.post('/todo/updateStatus', (req, res, next) => {
     next();
 });
 
+server.post('/todo/updateContent', (req, res, next) => {
+    let {_id} = req.user;
+    let todoID = req.hasOwnProperty('body') && req.body.hasOwnProperty('todoID')? req.body.todoID : '';
+    let todoContent = req.hasOwnProperty('body') && req.body.hasOwnProperty('todoContent')? req.body.todoContent : false;
+
+    console.log(todoID,todoContent);
+    if(todoID!==""){
+        todos.updateTodo(_id,todoID,todoContent).then((data) => {
+            res.send(data);
+        });
+    }
+    next();
+});
+
 server.get('/', (req, res, next) => {
     res.send('A Monster Lives Here, Run Away');
     next();
